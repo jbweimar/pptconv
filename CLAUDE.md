@@ -45,5 +45,6 @@ first and trust `output/qa/pair-NN.png` only after fonts resolve correctly.
 - Rebuild strategy, never retrofit (REFERENCE.md §2) unless JB overrides.
 - Old formatting dies; only structure + semantic emphasis (bold/italic/links) and
   speaker notes survive. That is the point of retemplating.
-- input/ and output decks contain Dawn's work content — never publish or share
-  outside this repo; repo stays private.
+- The repo is PUBLIC, but input/ and output/ decks are work content and stay
+  untracked (gitignored). Never commit a deck, render, or font file; check
+  `git ls-files` before pushing anything new.
