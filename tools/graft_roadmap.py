@@ -95,6 +95,23 @@ def merge_liststyle(txBody, layout_lst):
     bodyPr.addnext(new)
 
 
+def no_wrap_short_labels(el):
+    """Year circles etc.: the new theme font (Nunito) is wider than the old one, so
+    short fixed-box labels like '2027' start wrapping. Disable wrap on any shape
+    whose entire text is a single short token — centered overflow beats a wrap."""
+    if el.tag != qn("p:sp"):
+        return
+    txBody = el.find(qn("p:txBody"))
+    if txBody is None:
+        return
+    text = "".join(t.text or "" for t in txBody.iter(qn("a:t")))
+    if not text or len(text) > 6 or " " in text or "\n" in text:
+        return
+    bodyPr = txBody.find(qn("a:bodyPr"))
+    if bodyPr is not None:
+        bodyPr.set("wrap", "none")
+
+
 def graft(new_template, roadmap, out_path):
     prs = Presentation(new_template)
     strip_existing_slides(prs)
@@ -140,6 +157,7 @@ def graft(new_template, roadmap, out_path):
                 if lay_lst is not None and txBody is not None:
                     merge_liststyle(txBody, lay_lst)
                 new_ph.getparent().remove(new_ph)
+            no_wrap_short_labels(new_el)
             spTree.append(new_el)
 
         if s.has_notes_slide:
