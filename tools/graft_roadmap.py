@@ -132,6 +132,7 @@ def graft(new_template, roadmap, out_path):
             slide.shapes.title.text_frame.text = title_text
 
         spTree = slide.shapes._spTree
+        body_boxes = []  # (element, top_emu, has_text) for former body placeholders
         for shape in s.shapes:
             el = shape._element
             ph = ph_of(el)
@@ -156,9 +157,32 @@ def graft(new_template, roadmap, out_path):
                 txBody = new_el.find(qn("p:txBody"))
                 if lay_lst is not None and txBody is not None:
                     merge_liststyle(txBody, lay_lst)
+                was_body_ph = (new_ph.get("type") or "body") == "body"
                 new_ph.getparent().remove(new_ph)
+                if was_body_ph:
+                    txB = new_el.find(qn("p:txBody"))
+                    xfrm = new_el.find(qn("p:spPr") + "/" + qn("a:xfrm") + "/" + qn("a:off"))
+                    if txB is not None and xfrm is not None:
+                        text = "".join(t.text or "" for t in txB.iter(qn("a:t"))).strip()
+                        body_boxes.append((new_el, int(xfrm.get("y")), bool(text)))
             no_wrap_short_labels(new_el)
             spTree.append(new_el)
+
+        # Empty checkpoint boxes (targets without sample text) became invisible when
+        # de-placeholdered — refill each from the filled box in the same row so every
+        # target keeps a visible, editable scaffold.
+        ROW_TOL = 300000  # ~0.33"
+        for el, top, has_text in body_boxes:
+            if has_text:
+                continue
+            donor = next((d for d, dt, dh in body_boxes if dh and abs(dt - top) < ROW_TOL), None)
+            if donor is None:
+                continue
+            src_tx, dst_tx = donor.find(qn("p:txBody")), el.find(qn("p:txBody"))
+            for p in dst_tx.findall(qn("a:p")):
+                dst_tx.remove(p)
+            for p in src_tx.findall(qn("a:p")):
+                dst_tx.append(copy.deepcopy(p))
 
         if s.has_notes_slide:
             notes = s.notes_slide.notes_text_frame.text.strip()
